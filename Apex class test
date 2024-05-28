@@ -1,0 +1,57 @@
+@isTest
+public class SecureContactServiceTest {
+    @isTest
+    static void testGetContactsByLastName() {
+        // Create test data
+        Contact contact1 = new Contact(FirstName = 'John', LastName = 'Doe', Email = 'john.doe@example.com');
+        Contact contact2 = new Contact(FirstName = 'Jane', LastName = 'Doe', Email = 'jane.doe@example.com');
+        insert new List<Contact>{contact1, contact2};
+
+        // Instantiate the service
+        SecureContactService service = new SecureContactService();
+
+        // Test the method with valid input
+        Test.startTest();
+        List<Contact> doeContacts = service.getContactsByLastName('Doe');
+        Test.stopTest();
+
+        // Verify the results
+        System.assertEquals(2, doeContacts.size());
+        System.assert(doeContacts[0].LastName == 'Doe');
+        System.assert(doeContacts[1].LastName == 'Doe');
+
+        // Test the method with input that could cause injection if not handled
+        Test.startTest();
+        List<Contact> maliciousInputContacts = service.getContactsByLastName('\' OR 1=1');
+        Test.stopTest();
+
+        // Verify no records are returned for malicious input
+        System.assertEquals(0, maliciousInputContacts.size());
+    }
+
+    @isTest
+    static void testCreateContact() {
+        SecureContactService service = new SecureContactService();
+
+        // Test creating a contact with valid data
+        Test.startTest();
+        service.createContact('Alice', 'Smith', 'alice.smith@example.com');
+        Test.stopTest();
+
+        // Verify the contact was created
+        Contact newContact = [SELECT FirstName, LastName, Email FROM Contact WHERE Email = 'alice.smith@example.com' LIMIT 1];
+        System.assertEquals('Alice', newContact.FirstName);
+        System.assertEquals('Smith', newContact.LastName);
+        System.assertEquals('alice.smith@example.com', newContact.Email);
+
+        // Test creating a contact with missing fields
+        try {
+            Test.startTest();
+            service.createContact('', 'Smith', 'alice.smith@example.com');
+            Test.stopTest();
+            System.assert(false, 'Exception should have been thrown for missing first name.');
+        } catch (IllegalArgumentException e) {
+            System.assertEquals('First Name, Last Name, and Email are required fields.', e.getMessage());
+        }
+    }
+}
