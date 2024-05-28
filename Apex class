@@ -1,0 +1,41 @@
+public class SecureContactService {
+    // Method to retrieve Contacts based on a dynamic query parameter
+    public List<Contact> getContactsByLastName(String lastName) {
+        // Avoid SOQL injection by using variable binding
+        String safeLastName = String.escapeSingleQuotes(lastName);
+
+        try {
+            List<Contact> contacts = [
+                SELECT Id, FirstName, LastName, Email 
+                FROM Contact 
+                WHERE LastName = :safeLastName
+            ];
+            return contacts;
+        } catch (Exception e) {
+            // Log the exception and handle it gracefully
+            System.debug('Exception occurred: ' + e.getMessage());
+            return new List<Contact>();
+        }
+    }
+
+    // Method to create a new Contact
+    public void createContact(String firstName, String lastName, String email) {
+        if (String.isEmpty(firstName) || String.isEmpty(lastName) || String.isEmpty(email)) {
+            throw new IllegalArgumentException('First Name, Last Name, and Email are required fields.');
+        }
+
+        Contact newContact = new Contact(
+            FirstName = String.escapeSingleQuotes(firstName),
+            LastName = String.escapeSingleQuotes(lastName),
+            Email = String.escapeSingleQuotes(email)
+        );
+
+        try {
+            insert newContact;
+        } catch (DmlException e) {
+            // Log the exception and handle it gracefully
+            System.debug('DML Exception occurred: ' + e.getMessage());
+            throw new AuraHandledException('Failed to create contact. Please try again later.');
+        }
+    }
+}
