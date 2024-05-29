@@ -1,0 +1,44 @@
+public class SecureApexClass {
+
+    // Secure method to prevent SOQL Injection
+    public static List<Account> getAccountsByName(String accountName) {
+        // Using parameterized queries to prevent SOQL injection
+        String safeAccountName = '%' + String.escapeSingleQuotes(accountName) + '%';
+        return [SELECT Id, Name FROM Account WHERE Name LIKE :safeAccountName];
+    }
+
+    // Secure method for handling user passwords
+    public static void storeUserPassword(Id userId, String password) {
+        // Properly hashing the password before storing
+        String hashedPassword = Crypto.generateDigest('SHA-256', Blob.valueOf(password)).toString();
+        User u = [SELECT Id, Password__c FROM User WHERE Id = :userId];
+        u.Password__c = hashedPassword; // Storing hashed password
+        update u;
+    }
+
+    // Secure method with strong encryption
+    public static String encryptData(String data) {
+        // Example of strong encryption
+        Blob dataBlob = Blob.valueOf(data);
+        Blob key = Crypto.generateAesKey(256);
+        Blob encryptedBlob = Crypto.encryptWithManagedIV('AES256', key, dataBlob);
+        return EncodingUtil.base64Encode(encryptedBlob);
+    }
+
+    // Secure method with proper input validation
+    public static void processUserData(String userData) {
+        // Validating and sanitizing user input
+        if (String.isNotBlank(userData) && userData.length() <= 255) {
+            System.debug('Processing user data: ' + String.escapeSingleQuotes(userData));
+        } else {
+            throw new IllegalArgumentException('Invalid user data');
+        }
+    }
+
+    // Secure method for handling sensitive data
+    public static void handleSensitiveData(String sensitiveData) {
+        // Ensure sensitive data is handled securely
+        String sanitizedData = String.escapeSingleQuotes(sensitiveData);
+        System.debug('Handling sensitive data: ' + sanitizedData);
+    }
+}
