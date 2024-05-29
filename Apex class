@@ -1,41 +1,31 @@
-public class SecureContactService {
-    // Method to retrieve Contacts based on a dynamic query parameter
-    public List<Contact> getContactsByLastName(String lastName) {
-        // Avoid SOQL injection by using variable binding
-        String safeLastName = String.escapeSingleQuotes(lastName);
+public class InsecureApexClass {
 
-        try {
-            List<Contact> contacts = [
-                SELECT Id, FirstName, LastName, Email 
-                FROM Contact 
-                WHERE LastName = :safeLastName
-            ];
-            return contacts;
-        } catch (Exception e) {
-            // Log the exception and handle it gracefully
-            System.debug('Exception occurred: ' + e.getMessage());
-            return new List<Contact>();
-        }
+    // Vulnerable method with SOQL Injection
+    public static List<Account> getAccountsByName(String accountName) {
+        // This is a common security flaw - directly using user input in a dynamic SOQL query
+        String query = 'SELECT Id, Name FROM Account WHERE Name LIKE \'%' + accountName + '%\'';
+        return Database.query(query);
     }
 
-    // Method to create a new Contact
-    public void createContact(String firstName, String lastName, String email) {
-        if (String.isEmpty(firstName) || String.isEmpty(lastName) || String.isEmpty(email)) {
-            throw new IllegalArgumentException('First Name, Last Name, and Email are required fields.');
-        }
+    // Insecure method for handling user passwords
+    public static void storeUserPassword(Id userId, String password) {
+        // Weak hashing practice - storing passwords without proper hashing and salting
+        User u = [SELECT Id, Password__c FROM User WHERE Id = :userId];
+        u.Password__c = password; // Storing plaintext password (insecure)
+        update u;
+    }
 
-        Contact newContact = new Contact(
-            FirstName = String.escapeSingleQuotes(firstName),
-            LastName = String.escapeSingleQuotes(lastName),
-            Email = String.escapeSingleQuotes(email)
-        );
+    // Insecure method with weak encryption
+    public static String encryptData(String data) {
+        // Example of weak encryption
+        Blob dataBlob = Blob.valueOf(data);
+        Blob encryptedBlob = Crypto.encryptWithManagedIV('AES128', Crypto.generateAesKey(128), dataBlob);
+        return EncodingUtil.base64Encode(encryptedBlob);
+    }
 
-        try {
-            insert newContact;
-        } catch (DmlException e) {
-            // Log the exception and handle it gracefully
-            System.debug('DML Exception occurred: ' + e.getMessage());
-            throw new AuraHandledException('Failed to create contact. Please try again later.');
-        }
+    // Insecure method with improper input validation
+    public static void processUserData(String userData) {
+        // Not validating or sanitizing user input
+        System.debug('Processing user data: ' + userData);
     }
 }
